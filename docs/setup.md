@@ -17,6 +17,8 @@
 
 相邻的 `pythonocc` 目录只是当前电脑上的运行时来源，不是本仓库的源码依赖。不要提交其绝对路径或内容。
 
+不要求把该环境的 `Scripts` 目录加入系统 `PATH`；下面的命令都显式调用 OCC Python。
+
 ## 验证
 
 ```powershell
@@ -44,7 +46,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify.ps1 -Python
 
 ## 接口边界
 
-- Python/OCC：`hypermesh-weld-agent doctor --pythonocc-python PATH`
+- Python/OCC：`OCC_PYTHON -m weld_agent.cli doctor --pythonocc-python OCC_PYTHON`
 - 输入合同：`schemas/selection.schema.json`
 - 输出合同：`schemas/weld-candidates.schema.json`
 - HyperMesh：`hypermesh/tcl/weld_agent_probe.tcl`

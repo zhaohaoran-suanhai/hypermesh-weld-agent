@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zhaohaoran-suanhai.github.io/hypermesh-weld-agent/weld-candidates.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "status", "has_candidate_regions", "provider", "algorithm_version", "component_refs", "parameters", "elapsed_ms", "regions", "warnings", "errors"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+    "status": {"enum": ["success", "failure"]},
+    "has_candidate_regions": {"type": "boolean"},
+    "provider": {"type": "string", "minLength": 1},
+    "algorithm_version": {"type": "string", "minLength": 1},
+    "component_refs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {"type": "integer", "minimum": 1}
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["search_distance", "max_gap", "pitch", "end_offset", "edge_clearance", "rule_profile_version"],
+      "properties": {
+        "search_distance": {"type": "number", "exclusiveMinimum": 0},
+        "max_gap": {"type": "number", "minimum": 0},
+        "pitch": {"type": "number", "exclusiveMinimum": 0},
+        "end_offset": {"type": "number", "minimum": 0},
+        "edge_clearance": {"type": "number", "minimum": 0},
+        "rule_profile_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "elapsed_ms": {"type": "integer", "minimum": 0},
+    "regions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "risk_flags", "candidates"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "risk_flags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "candidates": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "position", "direction", "component_refs", "confidence", "evidence", "status"],
+              "properties": {
+                "id": {"type": "string", "minLength": 1},
+                "position": {"type": "array", "minItems": 3, "maxItems": 3, "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "items": false},
+                "direction": {"type": "array", "minItems": 3, "maxItems": 3, "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}], "items": false},
+                "component_refs": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 1}},
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                "evidence": {"type": "object"},
+                "status": {"const": "pending_review"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": {"enum": ["NO_PROXIMITY", "NO_VALID_OVERLAP", "INVALID_GEOMETRY", "UNSUPPORTED_GEOMETRY", "AMBIGUOUS_RESULT", "EXPORT_MISMATCH"]},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "success"}}},
+      "then": {"properties": {"has_candidate_regions": {"const": true}, "regions": {"minItems": 1}, "errors": {"maxItems": 0}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "failure"}}},
+      "then": {"properties": {"has_candidate_regions": {"const": false}, "regions": {"maxItems": 0}, "errors": {"minItems": 1}}}
+    }
+  ]
+}

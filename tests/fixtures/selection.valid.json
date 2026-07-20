@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-001",
+  "hypermesh": {
+    "build": "2017",
+    "model_name": "FDOOR",
+    "units": "mm",
+    "coordinate_system": "global"
+  },
+  "components": [
+    {
+      "id": 9,
+      "name": "6101041-DDA1",
+      "geometry": {
+        "path": "C:/Temp/run-001/component-9.step",
+        "format": "STEP",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "summary": {
+        "surface_count": 20,
+        "solid_count": 1,
+        "element_count": 0,
+        "bbox": [0, 0, 0, 100, 50, 5]
+      }
+    },
+    {
+      "id": 12,
+      "name": "6101035-DDA1(SW)",
+      "geometry": {
+        "path": "C:/Temp/run-001/component-12.step",
+        "format": "STEP",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "summary": {
+        "surface_count": 16,
+        "solid_count": 1,
+        "element_count": 0,
+        "bbox": [20, 10, 1, 80, 40, 6]
+      }
+    }
+  ],
+  "parameters": {
+    "search_distance": 5,
+    "max_gap": 2,
+    "pitch": 40,
+    "end_offset": 20,
+    "edge_clearance": 10,
+    "rule_profile_version": "review-only-1"
+  }
+}

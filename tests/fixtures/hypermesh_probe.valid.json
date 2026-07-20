@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "selected_components": [
+    {"id": 9, "name": "6101041-DDA1"},
+    {"id": 12, "name": "6101035-DDA1(SW)"}
+  ],
+  "capabilities": {
+    "geomexport": true,
+    "legacy_geomoutputdata": true,
+    "connector_create": true
+  }
+}

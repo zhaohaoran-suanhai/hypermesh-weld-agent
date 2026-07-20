@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zhaohaoran-suanhai.github.io/hypermesh-weld-agent/selection.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "hypermesh", "components", "parameters"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+    "hypermesh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["build", "model_name", "units", "coordinate_system"],
+      "properties": {
+        "build": {"type": "string", "minLength": 1},
+        "model_name": {"type": "string", "minLength": 1},
+        "units": {"enum": ["mm", "m", "inch"]},
+        "coordinate_system": {"type": "string", "minLength": 1}
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "geometry", "summary"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 1},
+          "name": {"type": "string", "minLength": 1},
+          "geometry": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "format", "sha256"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "format": {"enum": ["STEP", "IGES"]},
+              "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+            }
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["surface_count", "solid_count", "element_count", "bbox"],
+            "properties": {
+              "surface_count": {"type": "integer", "minimum": 0},
+              "solid_count": {"type": "integer", "minimum": 0},
+              "element_count": {"type": "integer", "minimum": 0},
+              "bbox": {
+                "type": "array",
+                "minItems": 6,
+                "maxItems": 6,
+                "prefixItems": [
+                  {"type": "number"}, {"type": "number"}, {"type": "number"},
+                  {"type": "number"}, {"type": "number"}, {"type": "number"}
+                ],
+                "items": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["search_distance", "max_gap", "pitch", "end_offset", "edge_clearance", "rule_profile_version"],
+      "properties": {
+        "search_distance": {"type": "number", "exclusiveMinimum": 0},
+        "max_gap": {"type": "number", "minimum": 0},
+        "pitch": {"type": "number", "exclusiveMinimum": 0},
+        "end_offset": {"type": "number", "minimum": 0},
+        "edge_clearance": {"type": "number", "minimum": 0},
+        "rule_profile_version": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

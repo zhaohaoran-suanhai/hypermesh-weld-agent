@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+*.egg-info/
+build/
+dist/
+.env.local
+config.local.json
+*.hm
+*.step
+*.stp
+*.iges
+*.igs
+run-artifacts/

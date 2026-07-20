@@ -15,7 +15,9 @@ proc ::weldagent::component_summary {component_id} {
     if {$surface_count == 0} {
         error "EMPTY_COMPONENT_GEOMETRY: Component $component_id has no surfaces"
     }
-    set bbox [hm_getboundingbox surfaces 1 1 0 0]
+    *clearmark components 1
+    *createmark components 1 $component_id
+    set bbox [hm_getboundingbox components 1 2 0 0]
     if {[llength $bbox] != 6} {
         error "EMPTY_COMPONENT_GEOMETRY: Component $component_id has no valid surface bounding box"
     }
@@ -31,17 +33,39 @@ proc ::weldagent::component_summary {component_id} {
     return [list $surface_count $solid_count $element_count $bbox]
 }
 
-proc ::weldagent::set_visible_components {component_ids} {
-    *displaycollectorwithfilter components "none" "" 1 0
-    if {[llength $component_ids] > 0} {
+proc ::weldagent::displayed_component_ids {entity_types} {
+    set component_ids {}
+    foreach entity_type $entity_types {
+        *clearmark $entity_type 2
+        *createmark $entity_type 2 displayed
+        if {[hm_marklength $entity_type 2] == 0} {
+            continue
+        }
+        foreach component_id [hm_getvalue $entity_type mark=2 dataname=collector] {
+            if {$component_id > 0} {
+                lappend component_ids $component_id
+            }
+        }
+    }
+    return [lsort -unique -integer $component_ids]
+}
+
+proc ::weldagent::set_component_display_state {element_ids geometry_ids} {
+    *displaycollectorwithfilter components "none" "" 1 1
+    if {[llength $element_ids] > 0} {
         *clearmark components 2
-        eval *createmark components 2 $component_ids
+        eval *createmark components 2 $element_ids
         *displaycollectorsbymark components 2 on 1 0
+    }
+    if {[llength $geometry_ids] > 0} {
+        *clearmark components 2
+        eval *createmark components 2 $geometry_ids
+        *displaycollectorsbymark components 2 on 0 1
     }
 }
 
 proc ::weldagent::export_component_step {component_id step_path} {
-    ::weldagent::set_visible_components [list $component_id]
+    ::weldagent::set_component_display_state {} [list $component_id]
     set options [list \
         "Version=AP214" \
         "LayerMode=None" \
@@ -53,7 +77,7 @@ proc ::weldagent::export_component_step {component_id step_path} {
         "WriteNameFrom=Component" \
         "OptimizeForCAD=Off"]
     set export_status [catch {
-        *geomexport "step_ct" $step_path $options
+        eval *geomexport [list "step_ct" $step_path] $options
     } export_message]
     if {$export_status != 0} {
         error "EXPORT_FAILED: Component $component_id: $export_message"
@@ -154,9 +178,9 @@ proc ::weldagent::run_export_probe {output_root} {
         error "INVALID_SELECTION: select exactly two distinct Components"
     }
 
-    *clearmark components 2
-    *createmark components 2 displayed
-    set original_visible [hm_getmark components 2]
+    set original_visible_elements [::weldagent::displayed_component_ids {elements}]
+    set original_visible_geometry [::weldagent::displayed_component_ids \
+        {points lines surfaces solids}]
 
     set run_id "hm-[clock format [clock seconds] -format %Y%m%d-%H%M%S]-[pid]"
     set run_dir [file normalize [file join $output_root $run_id]]
@@ -183,7 +207,9 @@ proc ::weldagent::run_export_probe {output_root} {
     } message options]
 
     set restore_status [catch {
-        ::weldagent::set_visible_components $original_visible
+        ::weldagent::set_component_display_state \
+            $original_visible_elements \
+            $original_visible_geometry
     } restore_message]
     if {$status != 0 || $restore_status != 0} {
         foreach step_path $created_steps {

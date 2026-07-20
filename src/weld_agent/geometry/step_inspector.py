@@ -71,7 +71,7 @@ class PythonOccStepInspector:
             )
 
         box = Bnd_Box()
-        brepbndlib.Add(shape, box)
+        brepbndlib.AddOptimal(shape, box, False, False)
         try:
             raw_bbox = box.Get()
         except RuntimeError as exc:

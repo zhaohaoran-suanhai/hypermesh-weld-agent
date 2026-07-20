@@ -28,8 +28,12 @@ def _find_tclsh() -> Path | None:
 
 HARNESS = r'''
 array set ::marks {}
-set ::visible {1 15 20}
+set ::visible_elements {1 15}
+set ::visible_geometry {15 20}
 set ::exported {}
+set ::display_flags {}
+set ::geomexport_option_counts {}
+set ::bbox_calls {}
 set ::fail_on @FAIL_ON@
 set ::selected @SELECTED@
 set ::surface_ids @SURFACE_IDS@
@@ -39,7 +43,17 @@ proc *clearmark {entity mark} { set ::marks($entity,$mark) {} }
 proc *createmarkpanel {entity mark message} { set ::marks($entity,$mark) $::selected }
 proc *createmark {entity mark args} {
     if {$entity eq "components" && [lindex $args 0] eq "displayed"} {
-        set ::marks($entity,$mark) $::visible
+        set ::marks($entity,$mark) [lsort -unique -integer [concat $::visible_elements $::visible_geometry]]
+        return
+    }
+    if {[lindex $args 0] eq "displayed"} {
+        if {$entity eq "elements"} {
+            set ::marks($entity,$mark) $::visible_elements
+        } elseif {$entity eq "surfaces"} {
+            set ::marks($entity,$mark) $::visible_geometry
+        } else {
+            set ::marks($entity,$mark) {}
+        }
         return
     }
     if {[lindex $args 0] eq "by comp id"} {
@@ -54,10 +68,16 @@ proc *createmark {entity mark args} {
 proc hm_getmark {entity mark} { return $::marks($entity,$mark) }
 proc hm_marklength {entity mark} { return [llength $::marks($entity,$mark)] }
 proc hm_getvalue {entity args} {
+    if {[lsearch -exact $args "mark=2"] >= 0 && [lsearch -exact $args "dataname=collector"] >= 0} {
+        if {$entity eq "elements"} { return $::visible_elements }
+        if {$entity eq "surfaces"} { return $::visible_geometry }
+        return {}
+    }
     if {[lsearch -exact $args "id=15"] >= 0} { return "6101081-DD01-A" }
     return "6101161-DD01-A"
 }
 proc hm_getboundingbox {entity mark args} {
+    lappend ::bbox_calls "$entity:[join $args ,]"
     if {$::last_component == 15} { return {0 0 0 100 50 5} }
     return {20 10 1 80 40 6}
 }
@@ -65,14 +85,23 @@ proc hm_info {args} {
     if {[lindex $args 0] eq "currentfile"} { return $::model_file }
     return "2017.2"
 }
-proc *displaycollectorwithfilter {entity state filter geometry elements} {
-    if {$state eq "none"} { set ::visible {} }
+proc *displaycollectorwithfilter {entity state filter elements geometry} {
+    lappend ::display_flags "$elements,$geometry"
+    if {$state eq "none"} {
+        if {$elements} { set ::visible_elements {} }
+        if {$geometry} { set ::visible_geometry {} }
+    }
 }
-proc *displaycollectorsbymark {entity mark state geometry elements} {
-    set ::visible $::marks($entity,$mark)
+proc *displaycollectorsbymark {entity mark state elements geometry} {
+    lappend ::display_flags "$elements,$geometry"
+    if {$state eq "on"} {
+        if {$elements} { set ::visible_elements $::marks($entity,$mark) }
+        if {$geometry} { set ::visible_geometry $::marks($entity,$mark) }
+    }
 }
-proc *geomexport {cad_type step_path options} {
-    set component_id [lindex $::visible 0]
+proc *geomexport {cad_type step_path args} {
+    lappend ::geomexport_option_counts [llength $args]
+    set component_id [lindex $::visible_geometry 0]
     lappend ::exported $component_id
     set stream [open $step_path w]
     puts $stream "STEP-$component_id"
@@ -88,8 +117,12 @@ set status [catch {
 puts "STATUS=$status"
 puts "MESSAGE=$message"
 if {$status != 0} { puts "ERRORINFO=$::errorInfo" }
-puts "VISIBLE=$::visible"
+puts "VISIBLE_ELEMENTS=$::visible_elements"
+puts "VISIBLE_GEOMETRY=$::visible_geometry"
 puts "EXPORTED=$::exported"
+puts "DISPLAY_FLAGS=$::display_flags"
+puts "GEOMEXPORT_OPTION_COUNTS=$::geomexport_option_counts"
+puts "BBOX_CALLS=$::bbox_calls"
 if {$status != 0} { exit 7 }
 '''
 
@@ -141,7 +174,38 @@ def test_export_emits_two_steps_and_restores_display(tmp_path: Path) -> None:
     ]
     assert payload["export_options"]["units"] == "Millimeters"
     assert _line(completed.stdout, "EXPORTED=") == "15 20"
-    assert _line(completed.stdout, "VISIBLE=") == "1 15 20"
+    assert _line(completed.stdout, "VISIBLE_ELEMENTS=") == "1 15"
+    assert _line(completed.stdout, "VISIBLE_GEOMETRY=") == "15 20"
+
+
+def test_export_restores_independent_mesh_and_geometry_visibility(
+    tmp_path: Path,
+) -> None:
+    completed = _run_harness(tmp_path, fail_on=-1)
+    assert completed.returncode == 0, completed.stderr
+    assert set(_line(completed.stdout, "DISPLAY_FLAGS=").split()) == {
+        "1,1",
+        "1,0",
+        "0,1",
+    }
+
+
+def test_export_passes_each_geomexport_option_as_a_separate_argument(
+    tmp_path: Path,
+) -> None:
+    completed = _run_harness(tmp_path, fail_on=-1)
+    assert completed.returncode == 0, completed.stderr
+    assert set(_line(completed.stdout, "GEOMEXPORT_OPTION_COUNTS=").split()) == {
+        "9"
+    }
+
+
+def test_manifest_uses_component_geometry_bounding_boxes(tmp_path: Path) -> None:
+    completed = _run_harness(tmp_path, fail_on=-1)
+    assert completed.returncode == 0, completed.stderr
+    assert set(_line(completed.stdout, "BBOX_CALLS=").split()) == {
+        "components:2,0,0"
+    }
 
 
 def test_second_export_failure_cleans_steps_and_restores_display(
@@ -149,7 +213,8 @@ def test_second_export_failure_cleans_steps_and_restores_display(
 ) -> None:
     completed = _run_harness(tmp_path, fail_on=20)
     assert completed.returncode == 7
-    assert _line(completed.stdout, "VISIBLE=") == "1 15 20"
+    assert _line(completed.stdout, "VISIBLE_ELEMENTS=") == "1 15"
+    assert _line(completed.stdout, "VISIBLE_GEOMETRY=") == "15 20"
     run_dirs = list(tmp_path.iterdir())
     assert len(run_dirs) == 1
     assert not (run_dirs[0] / "export-manifest.json").exists()
@@ -167,7 +232,8 @@ def test_empty_component_geometry_restores_display(tmp_path: Path) -> None:
     completed = _run_harness(tmp_path, fail_on=-1, surface_ids="{}")
     assert completed.returncode == 7
     assert "EMPTY_COMPONENT_GEOMETRY" in _line(completed.stdout, "MESSAGE=")
-    assert _line(completed.stdout, "VISIBLE=") == "1 15 20"
+    assert _line(completed.stdout, "VISIBLE_ELEMENTS=") == "1 15"
+    assert _line(completed.stdout, "VISIBLE_GEOMETRY=") == "15 20"
     run_dir = next(tmp_path.iterdir())
     assert list(run_dir.iterdir()) == []
 

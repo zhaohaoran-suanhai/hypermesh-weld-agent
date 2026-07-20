@@ -1,11 +1,16 @@
 import hashlib
 import json
+import math
 from pathlib import Path
 
 import pytest
 
 from weld_agent.contracts import load_document
-from weld_agent.export_finalizer import ExportFinalizationError, finalize_export
+from weld_agent.export_finalizer import (
+    ExportFinalizationError,
+    _bbox_matches,
+    finalize_export,
+)
 from weld_agent.geometry.step_inspector import StepInspection, StepInspectionError
 
 
@@ -15,6 +20,53 @@ FIXTURES = Path(__file__).parent / "fixtures"
 class FakeInspector:
     def inspect(self, path: Path) -> StepInspection:
         return StepInspection(12, 0, (0, 0, 0, 100, 50, 5))
+
+
+def test_bbox_match_is_independent_of_global_translation() -> None:
+    near_origin = [0, 0, 0, 1000, 100, 10]
+    far_from_origin = [1_000_000, 0, 0, 1_001_000, 100, 10]
+    near_imported = (0.5, 0, 0, 1000.5, 100, 10)
+    far_imported = (1_000_000.5, 0, 0, 1_001_000.5, 100, 10)
+
+    assert not _bbox_matches(near_origin, near_imported, 0.01, 0.000001)
+    assert not _bbox_matches(far_from_origin, far_imported, 0.01, 0.000001)
+
+
+def test_bbox_match_combines_absolute_tolerance_with_axis_span() -> None:
+    source = [0, 0, 0, 1000, 100, 10]
+    imported = (-0.0105, 0, 0, 1000.0105, 100, 10)
+
+    assert _bbox_matches(source, imported, 0.01, 0.000001)
+
+
+@pytest.mark.parametrize(
+    ("source", "imported", "absolute", "relative"),
+    [
+        ([0, 0, 0, math.inf, 1, 1], (0, 0, 0, 1, 1, 1), 0.01, 0.0),
+        ([0, 0, 0, 1, 1, 1], (0, 0, 0, math.nan, 1, 1), 0.01, 0.0),
+        ([10, 0, 0, 0, 1, 1], (0, 0, 0, 1, 1, 1), 0.01, 0.0),
+        (
+            [-1e308, 0, 0, 1e308, 1, 1],
+            (-1e308, 0, 0, 1e308, 1, 1),
+            0.01,
+            0.0,
+        ),
+        ([0, 0, 0, 1, 1, 1], (0, 0, 0, 1, 1, 1), math.inf, 0.0),
+        (
+            [0, 0, 0, 1e308, 1, 1],
+            (1e308, 0, 0, 1.5e308, 1, 1),
+            0.0,
+            1e308,
+        ),
+    ],
+)
+def test_bbox_match_rejects_invalid_numeric_inputs(
+    source: list[float],
+    imported: tuple[float, ...],
+    absolute: float,
+    relative: float,
+) -> None:
+    assert not _bbox_matches(source, imported, absolute, relative)
 
 
 def _manifest(tmp_path: Path) -> Path:
@@ -83,6 +135,31 @@ def test_bbox_mismatch_writes_failure_report_but_no_selection(tmp_path: Path) ->
     assert report["status"] == "failure"
     assert report["errors"][0]["code"] == "EXPORT_MISMATCH"
     assert report["components"][0]["checks_passed"] is False
+
+
+def test_non_finite_manifest_bbox_writes_classified_failure_report(
+    tmp_path: Path,
+) -> None:
+    manifest = _manifest(tmp_path)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["components"][0]["summary"]["bbox"][3] = math.inf
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ExportFinalizationError) as caught:
+        finalize_export(
+            manifest,
+            FIXTURES / "integration_profile.valid.json",
+            FakeInspector(),
+        )
+
+    assert caught.value.code == "EXPORT_MISMATCH"
+    report = load_document(
+        manifest.parent / "export-validation.json",
+        "export-validation.schema.json",
+    )
+    assert report["status"] == "failure"
+    assert report["components"] == []
+    assert report["errors"][0]["code"] == "EXPORT_MISMATCH"
 
 
 def test_inspector_failure_is_preserved_in_failure_report(tmp_path: Path) -> None:

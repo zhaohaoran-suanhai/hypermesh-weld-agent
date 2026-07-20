@@ -42,9 +42,10 @@ puts "MANIFEST=$manifest"
 
 出现 Component 选择面板后：
 
-1. 选择 Component 15 和 20；
-2. 确认选择并点击 `proceed`；
-3. 等待命令返回 `MANIFEST=...\export-manifest.json`。
+1. 点击黄色 `comps` 按钮打开 Component 列表；
+2. 勾选 `6101081-DD01-A`（ID 15）和 `6101161-DD01-A`（ID 20）左侧的复选框；
+3. 点击列表中的绿色 `select`，返回主面板后点击 `proceed`；
+4. 等待命令返回 `MANIFEST=...\export-manifest.json`。
 
 如果命令报错，不要重复使用同一个运行目录，也不要手工把不完整 STEP 当作有效输入。复制完整错误信息用于诊断。
 
@@ -102,7 +103,23 @@ Get-Content (Join-Path $runDir 'export-validation.json')
 - 两个 `checks_passed` 都为 `true`；
 - `errors` 为空。
 
-## 6. 数据边界
+包围盒比较采用 `绝对容差 + 相对容差 × 该轴零件跨度`，而不是按全局坐标值计算相对容差。因此，同一零件在全局坐标系中平移后不会改变校验结果。OCC 侧使用不依赖三角网格近似的最优包围盒。
+
+## 6. 已验证的真实模型结果
+
+2026-07-21 已在当前 34-Component 车门模型上完成一次端到端验证：
+
+- Component 15：STEP 14,626,038 bytes，OCC 读取到 775 Faces、0 Solids；
+- Component 20：STEP 7,446,703 bytes，OCC 读取到 981 Faces、1 Solid；
+- Component 15 六个包围盒坐标差值（OCC − HyperMesh，mm）：`[-0.0103648, -0.0045167, -0.0010731, 0.0025567, 0.0000038, 0.0007975]`；
+- Component 20 六个包围盒坐标差值（OCC − HyperMesh，mm）：`[-0.0000551, -0.0060481, -0.0000108, 0.0063874, -0.0042696, 0.0011484]`；
+- 两个 Component 的 STEP 均通过包围盒一致性与 JSON Schema 校验，并生成 `selection.json`；
+- 运行前后均为 34 个显示 Component、17,514 Surfaces、160 Solids、0 Elements、0 Connectors；
+- 未保存或覆盖 HyperMesh 模型，未创建 Connector。
+
+这些计数只证明导出接口对本次输入有效，不代表已经实现焊点识别。
+
+## 7. 数据边界
 
 本次生成的 STEP、manifest、校验报告和 selection 都位于：
 

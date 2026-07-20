@@ -54,15 +54,51 @@ def _bbox_delta(
     ]
 
 
+def _bbox_is_valid(values: list[float] | tuple[float, ...]) -> bool:
+    if len(values) != 6 or not all(math.isfinite(value) for value in values):
+        return False
+    for axis in range(3):
+        lower = values[axis]
+        upper = values[axis + 3]
+        if lower > upper or not math.isfinite(upper - lower):
+            return False
+    return True
+
+
 def _bbox_matches(
     source: list[float],
     imported: tuple[float, ...],
     absolute: float,
     relative: float,
 ) -> bool:
+    if (
+        not _bbox_is_valid(source)
+        or not _bbox_is_valid(imported)
+        or not math.isfinite(absolute)
+        or not math.isfinite(relative)
+        or absolute < 0
+        or relative < 0
+    ):
+        return False
+    source_spans = [source[index + 3] - source[index] for index in range(3)]
+    imported_spans = [
+        imported[index + 3] - imported[index] for index in range(3)
+    ]
+    axis_tolerances = []
+    for source_span, imported_span in zip(
+        source_spans,
+        imported_spans,
+        strict=True,
+    ):
+        tolerance = absolute + relative * max(abs(source_span), abs(imported_span))
+        if not math.isfinite(tolerance):
+            return False
+        axis_tolerances.append(tolerance)
     return all(
-        math.isclose(expected, actual, abs_tol=absolute, rel_tol=relative)
-        for expected, actual in zip(source, imported, strict=True)
+        abs(actual - expected) <= axis_tolerances[index % 3]
+        for index, (expected, actual) in enumerate(
+            zip(source, imported, strict=True)
+        )
     )
 
 
@@ -141,7 +177,22 @@ def finalize_export(
             digest = _sha256(step_path)
             inspection = inspector.inspect(step_path)
             source_bbox = component["summary"]["bbox"]
+            if (
+                not _bbox_is_valid(source_bbox)
+                or not _bbox_is_valid(inspection.bbox)
+                or not math.isfinite(profile["bbox_absolute_tolerance"])
+                or not math.isfinite(profile["bbox_relative_tolerance"])
+            ):
+                raise ExportFinalizationError(
+                    "EXPORT_MISMATCH",
+                    f"invalid bbox or tolerance for Component {component['id']}",
+                )
             delta = _bbox_delta(source_bbox, inspection.bbox)
+            if not all(math.isfinite(value) for value in delta):
+                raise ExportFinalizationError(
+                    "EXPORT_MISMATCH",
+                    f"bbox delta overflow for Component {component['id']}",
+                )
             matches = _bbox_matches(
                 source_bbox,
                 inspection.bbox,

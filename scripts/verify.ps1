@@ -22,6 +22,7 @@ $PythonOccPython = (Resolve-Path -LiteralPath $PythonOccPython).Path
 
 Push-Location $repoRoot
 try {
+    # The full local run intentionally includes tests that exercise PythonOCC.
     & $PythonOccPython -m pytest
     if ($LASTEXITCODE -ne 0) {
         throw "pytest failed with exit code $LASTEXITCODE"
@@ -30,6 +31,13 @@ try {
     & $PythonOccPython -m weld_agent.cli doctor --pythonocc-python $PythonOccPython
     if ($LASTEXITCODE -ne 0) {
         throw "runtime doctor failed with exit code $LASTEXITCODE"
+    }
+
+    & $PythonOccPython -m weld_agent.cli validate `
+        --schema integration-profile.schema.json `
+        --input config\integration-probe-1.json
+    if ($LASTEXITCODE -ne 0) {
+        throw "integration profile validation failed with exit code $LASTEXITCODE"
     }
 
     git diff --check

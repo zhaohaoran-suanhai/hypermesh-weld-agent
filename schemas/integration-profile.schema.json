@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zhaohaoran-suanhai.github.io/hypermesh-weld-agent/integration-profile.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile_name", "bbox_absolute_tolerance", "bbox_relative_tolerance", "parameters"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "profile_name": {"const": "integration-probe-1"},
+    "bbox_absolute_tolerance": {"type": "number", "minimum": 0},
+    "bbox_relative_tolerance": {"type": "number", "minimum": 0},
+    "parameters": {"$ref": "selection.schema.json#/properties/parameters"}
+  }
+}

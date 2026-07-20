@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.12"
 dependencies = [
   "jsonschema>=4.23,<5",
+  "referencing>=0.35,<0.38",
 ]
 
 [project.optional-dependencies]

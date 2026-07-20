@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zhaohaoran-suanhai.github.io/hypermesh-weld-agent/export-validation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "status", "components", "warnings", "errors"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+    "status": {"enum": ["success", "failure"]},
+    "components": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "step_path", "file_size", "sha256", "read_status", "face_count", "solid_count", "occ_bbox", "bbox_delta", "checks_passed"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 1},
+          "step_path": {"type": "string", "minLength": 1},
+          "file_size": {"type": "integer", "minimum": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "read_status": {"const": "success"},
+          "face_count": {"type": "integer", "minimum": 0},
+          "solid_count": {"type": "integer", "minimum": 0},
+          "occ_bbox": {"$ref": "selection.schema.json#/$defs/bbox"},
+          "bbox_delta": {"$ref": "selection.schema.json#/$defs/bbox"},
+          "checks_passed": {"type": "boolean"}
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "success"}}},
+      "then": {"properties": {"components": {"minItems": 2}, "errors": {"maxItems": 0}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "failure"}}},
+      "then": {"properties": {"errors": {"minItems": 1}}}
+    }
+  ]
+}

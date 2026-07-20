@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 
 
 class ContractValidationError(ValueError):
@@ -24,10 +25,43 @@ def _schema_path(schema_name: str) -> Path:
     return path
 
 
+def _schema_registry() -> Registry:
+    resources = []
+    for path in SCHEMA_DIR.glob("*.schema.json"):
+        schema = json.loads(path.read_text(encoding="utf-8"))
+        resources.append((schema["$id"], Resource.from_contents(schema)))
+    return Registry().with_resources(resources)
+
+
+def _is_absolute_any_platform(value: str) -> bool:
+    return PureWindowsPath(value).is_absolute() or PurePosixPath(value).is_absolute()
+
+
+def _validate_two_component_identity(
+    payload: Mapping[str, Any],
+    *,
+    document_name: str,
+    path_key: str | None,
+) -> None:
+    components = payload["components"]
+    ids = [component["id"] for component in components]
+    if len(set(ids)) != 2:
+        raise ContractValidationError(
+            f"{document_name} requires two distinct component IDs"
+        )
+    if path_key is None:
+        return
+    paths = [component[path_key] for component in components]
+    if len(set(paths)) != 2:
+        raise ContractValidationError("manifest requires two distinct STEP paths")
+    if not all(_is_absolute_any_platform(value) for value in paths):
+        raise ContractValidationError("manifest STEP paths must be absolute")
+
+
 def validate_document(schema_name: str, payload: Mapping[str, Any]) -> None:
     schema = json.loads(_schema_path(schema_name).read_text(encoding="utf-8"))
     errors = sorted(
-        Draft202012Validator(schema).iter_errors(payload),
+        Draft202012Validator(schema, registry=_schema_registry()).iter_errors(payload),
         key=lambda item: list(item.path),
     )
     if errors:
@@ -35,9 +69,17 @@ def validate_document(schema_name: str, payload: Mapping[str, Any]) -> None:
         location = "$" + "".join(f"[{value!r}]" for value in first.path)
         raise ContractValidationError(f"{location}: {first.message}")
     if schema_name == "selection.schema.json":
-        ids = [component["id"] for component in payload["components"]]
-        if len(set(ids)) != 2:
-            raise ContractValidationError("selection requires two distinct component IDs")
+        _validate_two_component_identity(
+            payload,
+            document_name="selection",
+            path_key=None,
+        )
+    if schema_name == "export-manifest.schema.json":
+        _validate_two_component_identity(
+            payload,
+            document_name="manifest",
+            path_key="step_path",
+        )
 
 
 def load_document(path: Path, schema_name: str) -> dict[str, Any]:

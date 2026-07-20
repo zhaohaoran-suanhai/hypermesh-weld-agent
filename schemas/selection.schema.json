@@ -1,6 +1,29 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://zhaohaoran-suanhai.github.io/hypermesh-weld-agent/selection.schema.json",
+  "$defs": {
+    "bbox": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {"type": "number"}, {"type": "number"}, {"type": "number"},
+        {"type": "number"}, {"type": "number"}, {"type": "number"}
+      ],
+      "items": false
+    },
+    "geometry_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface_count", "solid_count", "element_count", "bbox"],
+      "properties": {
+        "surface_count": {"type": "integer", "minimum": 0},
+        "solid_count": {"type": "integer", "minimum": 0},
+        "element_count": {"type": "integer", "minimum": 0},
+        "bbox": {"$ref": "#/$defs/bbox"}
+      }
+    }
+  },
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "run_id", "hypermesh", "components", "parameters"],
@@ -39,26 +62,7 @@
               "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
             }
           },
-          "summary": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["surface_count", "solid_count", "element_count", "bbox"],
-            "properties": {
-              "surface_count": {"type": "integer", "minimum": 0},
-              "solid_count": {"type": "integer", "minimum": 0},
-              "element_count": {"type": "integer", "minimum": 0},
-              "bbox": {
-                "type": "array",
-                "minItems": 6,
-                "maxItems": 6,
-                "prefixItems": [
-                  {"type": "number"}, {"type": "number"}, {"type": "number"},
-                  {"type": "number"}, {"type": "number"}, {"type": "number"}
-                ],
-                "items": false
-              }
-            }
-          }
+          "summary": {"$ref": "#/$defs/geometry_summary"}
         }
       }
     },

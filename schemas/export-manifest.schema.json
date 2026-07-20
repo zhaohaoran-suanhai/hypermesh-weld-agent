@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zhaohaoran-suanhai.github.io/hypermesh-weld-agent/export-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "hypermesh", "export_options", "components", "warnings"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+    "hypermesh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["build", "model_name", "units", "coordinate_system"],
+      "properties": {
+        "build": {"type": "string", "minLength": 1},
+        "model_name": {"type": "string", "minLength": 1},
+        "units": {"const": "mm"},
+        "coordinate_system": {"const": "global"}
+      }
+    },
+    "export_options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cad_type", "version", "units", "export", "layer_mode", "geometry_mode", "topology_mode", "assembly_mode", "write_name_from", "optimize_for_cad"],
+      "properties": {
+        "cad_type": {"const": "step_ct"},
+        "version": {"const": "AP214"},
+        "units": {"const": "Millimeters"},
+        "export": {"const": "Displayed"},
+        "layer_mode": {"const": "None"},
+        "geometry_mode": {"const": "Standard"},
+        "topology_mode": {"const": "Solid/Shell"},
+        "assembly_mode": {"const": "Hierarchy"},
+        "write_name_from": {"const": "Component"},
+        "optimize_for_cad": {"const": "Off"}
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "step_path", "summary"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 1},
+          "name": {"type": "string", "minLength": 1},
+          "step_path": {"type": "string", "minLength": 1},
+          "summary": {"$ref": "selection.schema.json#/$defs/geometry_summary"}
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}

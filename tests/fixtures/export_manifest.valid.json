@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "run_id": "hm-20260720-120000-1",
+  "hypermesh": {
+    "build": "2017",
+    "model_name": "FDOOR",
+    "units": "mm",
+    "coordinate_system": "global"
+  },
+  "export_options": {
+    "cad_type": "step_ct",
+    "version": "AP214",
+    "units": "Millimeters",
+    "export": "Displayed",
+    "layer_mode": "None",
+    "geometry_mode": "Standard",
+    "topology_mode": "Solid/Shell",
+    "assembly_mode": "Hierarchy",
+    "write_name_from": "Component",
+    "optimize_for_cad": "Off"
+  },
+  "components": [
+    {
+      "id": 15,
+      "name": "6101081-DD01-A",
+      "step_path": "C:/Temp/hypermesh-weld-agent/hm-20260720-120000-1/component-15.step",
+      "summary": {
+        "surface_count": 20,
+        "solid_count": 0,
+        "element_count": 0,
+        "bbox": [0, 0, 0, 100, 50, 5]
+      }
+    },
+    {
+      "id": 20,
+      "name": "6101161-DD01-A",
+      "step_path": "C:/Temp/hypermesh-weld-agent/hm-20260720-120000-1/component-20.step",
+      "summary": {
+        "surface_count": 16,
+        "solid_count": 0,
+        "element_count": 0,
+        "bbox": [20, 10, 1, 80, 40, 6]
+      }
+    }
+  ],
+  "warnings": []
+}

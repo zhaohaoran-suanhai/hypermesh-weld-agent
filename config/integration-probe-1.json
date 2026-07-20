@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "profile_name": "integration-probe-1",
+  "bbox_absolute_tolerance": 0.01,
+  "bbox_relative_tolerance": 0.000001,
+  "parameters": {
+    "search_distance": 5.0,
+    "max_gap": 2.0,
+    "pitch": 40.0,
+    "end_offset": 20.0,
+    "edge_clearance": 10.0,
+    "rule_profile_version": "integration-probe-1-not-engineering-standard"
+  }
+}

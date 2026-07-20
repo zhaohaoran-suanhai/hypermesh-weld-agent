@@ -28,3 +28,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers -p no:cacheprovider"
+markers = [
+  "occ_integration: requires a PythonOCC runtime",
+]

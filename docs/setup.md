@@ -44,6 +44,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify.ps1 -Python
 
 输出中的点只用于验证接口管线，不是真实焊点识别结果。
 
+## 终端识别显式焊点标记
+
+本功能把 OCC 当作后台几何库，不打开 OCC GUI。先设置解释器：
+
+```powershell
+$env:WELD_AGENT_PYTHONOCC_PYTHON = (Resolve-Path '..\pythonocc\.m\envs\occ\python.exe').Path
+```
+
+准备符合 `schemas/marker-input-manifest.schema.json` 的本地 `marker-input-manifest.json`，其中列出一个或多个已导出的候选 Component STEP 绝对路径。客户 CAD、STEP、manifest 和运行结果均不得提交到 Git。
+
+然后在仓库根目录运行：
+
+```powershell
+.\scripts\identify_weld_markers.ps1 -InputManifest 'C:\path\to\marker-input-manifest.json'
+```
+
+终端显示四个处理阶段及分类统计，结果写入 manifest 同级的 `marker-identification` 目录。若返回 `OUTPUT_CONFLICT`，创建一个新的 `run_id` 目录和 manifest 后重新运行，不覆盖已有审计结果。完整步骤见 [终端焊点标记识别](manual-tests/terminal-weld-marker-identification.md)。
+
 ## 双 Component STEP 导出
 
 真实 HyperMesh 操作步骤见 [HyperMesh 2017 STEP 导出探针](manual-tests/hm2017-step-export-probe.md)。
@@ -70,4 +88,7 @@ $manifestPath = Read-Host 'Paste MANIFEST path printed by HyperMesh'
 - 中间合同：`schemas/export-manifest.schema.json`
 - 导出校验合同：`schemas/export-validation.schema.json`
 - OCC 最终化：`python -m weld_agent.cli finalize-export --manifest $manifestPath --profile config/integration-probe-1.json`
+- 焊点标记输入：`schemas/marker-input-manifest.schema.json`
+- 焊点标记输出：`schemas/weld-markers.schema.json`
+- 终端识别：`scripts/identify_weld_markers.ps1 -InputManifest marker-input-manifest.json`
 - 几何算法：通过 `CandidateProvider` 协议替换；当前只有 `fixture-test-only`

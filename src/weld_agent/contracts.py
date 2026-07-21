@@ -58,6 +58,24 @@ def _validate_two_component_identity(
         raise ContractValidationError("manifest STEP paths must be absolute")
 
 
+def _validate_marker_component_identity(payload: Mapping[str, Any]) -> None:
+    components = payload["components"]
+    ids = [component["id"] for component in components]
+    if len(set(ids)) != len(ids):
+        raise ContractValidationError(
+            "marker manifest requires distinct component IDs"
+        )
+    paths = [component["step_path"] for component in components]
+    if len(set(paths)) != len(paths):
+        raise ContractValidationError(
+            "marker manifest requires distinct STEP paths"
+        )
+    if not all(_is_absolute_any_platform(value) for value in paths):
+        raise ContractValidationError(
+            "marker manifest STEP paths must be absolute"
+        )
+
+
 def validate_document(schema_name: str, payload: Mapping[str, Any]) -> None:
     schema = json.loads(_schema_path(schema_name).read_text(encoding="utf-8"))
     errors = sorted(
@@ -80,6 +98,8 @@ def validate_document(schema_name: str, payload: Mapping[str, Any]) -> None:
             document_name="manifest",
             path_key="step_path",
         )
+    if schema_name == "marker-input-manifest.schema.json":
+        _validate_marker_component_identity(payload)
 
 
 def load_document(path: Path, schema_name: str) -> dict[str, Any]:

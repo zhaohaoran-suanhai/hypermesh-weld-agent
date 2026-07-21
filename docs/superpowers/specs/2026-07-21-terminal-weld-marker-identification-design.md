@@ -1,7 +1,7 @@
 # 终端焊点标记识别设计规格
 
 日期：2026-07-21  
-状态：等待书面规格复核
+状态：已批准
 
 ## 1. 目标
 
@@ -168,6 +168,7 @@ WELD_AGENT_PYTHONOCC_PYTHON
 - `INVALID_MANIFEST`：输入清单不符合合同；
 - `STEP_READ_FAILED`：STEP 不存在、为空或 OCC 无法读取；
 - `EMPTY_IMPORTED_SHAPE`：没有可识别的 Face 或 Solid；
+- `INVALID_GEOMETRY`：中心、包围盒或候选轴线包含非有限值，无法写入可靠结果；
 - `UNIT_MISMATCH`：输入不是毫米或单位不一致；
 - `OUTPUT_CONFLICT`：目标运行结果已存在且没有显式覆盖许可；
 - `OUTPUT_WRITE_FAILED`：结果无法完整写入。

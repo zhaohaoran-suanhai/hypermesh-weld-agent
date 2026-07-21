@@ -49,3 +49,58 @@ def test_domain_model_does_not_confuse_geometry_with_engineering_semantics() -> 
     assert "工程语义" in text
     assert "不能单独证明" in text
     assert "Connector" in text
+
+
+INTEGRATION_FACTS = {
+    "docs/integrations/local-environment.md": (
+        "C:\\Program Files\\Altair\\2017",
+        "hmopengl.exe",
+        "hmbatch.exe",
+        "Python 3.11.15",
+        "OCC 7.9.0",
+        "WELD_AGENT_PYTHONOCC_PYTHON",
+    ),
+    "docs/integrations/hypermesh-2017.md": (
+        "Tcl Console",
+        "source",
+        "::weldagent",
+        "hm_getvalue",
+        "hm_getboundingbox",
+        "*geomexport",
+        "状态恢复",
+    ),
+    "docs/integrations/pythonocc.md": (
+        "StepInspector",
+        "MarkerStepReader",
+        "CandidateProvider",
+        "OCC.Display",
+        "pytest",
+    ),
+    "docs/integrations/hypermesh-occ-bridge.md": (
+        "STEP + JSON",
+        "Schema",
+        "临时运行目录",
+        "新增非焊点功能",
+        "人工复核",
+    ),
+}
+
+
+def test_integration_documents_record_verified_local_interfaces() -> None:
+    for relative, facts in INTEGRATION_FACTS.items():
+        text = read(relative)
+        for fact in facts:
+            assert fact in text, f"{relative} must contain {fact}"
+
+
+def test_maintained_documents_do_not_embed_private_python_path() -> None:
+    maintained = (
+        "README.md",
+        "AGENTS.md",
+        "docs/current-state.md",
+        "docs/architecture.md",
+        "docs/development.md",
+        *INTEGRATION_FACTS,
+    )
+    for relative in maintained:
+        assert "C:\\Users\\" not in read(relative)

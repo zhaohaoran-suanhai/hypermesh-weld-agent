@@ -8,6 +8,14 @@ from pathlib import Path
 from weld_agent.contracts import ContractValidationError, load_document
 from weld_agent.export_finalizer import ExportFinalizationError, finalize_export
 from weld_agent.geometry.step_inspector import PythonOccStepInspector, StepInspectionError
+from weld_agent.geometry.occ_marker_reader import (
+    MarkerStepReadError,
+    PythonOccMarkerReader,
+)
+from weld_agent.marker_identification import (
+    MarkerIdentificationError,
+    identify_weld_markers,
+)
 from weld_agent.providers.fixture import FixtureCandidateProvider
 from weld_agent.runtime import probe_pythonocc
 from weld_agent.workflow import run_analysis
@@ -32,6 +40,9 @@ def _parser() -> argparse.ArgumentParser:
     finalize = subparsers.add_parser("finalize-export")
     finalize.add_argument("--manifest", type=Path, required=True)
     finalize.add_argument("--profile", type=Path, required=True)
+
+    identify = subparsers.add_parser("identify-markers")
+    identify.add_argument("--manifest", type=Path, required=True)
     return parser
 
 
@@ -53,6 +64,26 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(result.selection_path)
             return 0
+        if args.command == "identify-markers":
+            artifacts = identify_weld_markers(
+                args.manifest,
+                PythonOccMarkerReader(),
+                print,
+            )
+            payload = json.loads(artifacts.json_path.read_text(encoding="utf-8"))
+            print("\n识别完成")
+            for key in (
+                "component_count",
+                "marker_count",
+                "cylinder_marker",
+                "triangular_marker",
+                "unknown_marker",
+            ):
+                print(f"  {key:<20}{payload['summary'][key]:>3}")
+            print(f"\n详细结果：{artifacts.json_path}")
+            print(f"表格结果：{artifacts.csv_path}")
+            print(f"运行日志：{artifacts.log_path}")
+            return 0
         output = run_analysis(
             args.selection,
             args.output_root,
@@ -64,6 +95,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc.code}: {exc}", file=sys.stderr)
         return 2
     except StepInspectionError as exc:
+        print(f"error: {exc.code}: {exc}", file=sys.stderr)
+        return 2
+    except MarkerIdentificationError as exc:
+        print(f"error: {exc.code}: {exc}", file=sys.stderr)
+        return 2
+    except MarkerStepReadError as exc:
         print(f"error: {exc.code}: {exc}", file=sys.stderr)
         return 2
     except (ContractValidationError, OSError, ValueError) as exc:

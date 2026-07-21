@@ -104,3 +104,57 @@ def test_maintained_documents_do_not_embed_private_python_path() -> None:
     )
     for relative in maintained:
         assert "C:\\Users\\" not in read(relative)
+
+
+ADR_FILES = (
+    "docs/decisions/0001-terminal-first-independent-repository.md",
+    "docs/decisions/0002-pythonocc-headless-geometry-kernel.md",
+    "docs/decisions/0003-explicit-cad-markers-first.md",
+    "docs/decisions/0004-user-approved-connectors.md",
+)
+
+
+def test_adrs_have_required_structure_and_are_indexed() -> None:
+    index = read("docs/decisions/README.md")
+    for relative in ADR_FILES:
+        text = read(relative)
+        for heading in ("## Status", "## Context", "## Decision", "## Consequences"):
+            assert heading in text
+        assert Path(relative).name in index
+
+
+def test_historical_directories_warn_that_they_are_not_current_truth() -> None:
+    for relative in (
+        "docs/superpowers/README.md",
+        "docs/superpowers/specs/README.md",
+        "docs/superpowers/plans/README.md",
+    ):
+        text = read(relative)
+        assert "历史" in text
+        assert "docs/current-state.md" in text
+
+
+def maintained_markdown_files() -> list[Path]:
+    files = [ROOT / "README.md", ROOT / "AGENTS.md"]
+    files.extend(path for path in (ROOT / "docs").glob("*.md"))
+    files.extend(path for path in (ROOT / "docs/integrations").glob("*.md"))
+    files.extend(path for path in (ROOT / "docs/decisions").glob("*.md"))
+    files.extend(path for path in (ROOT / "docs/manual-tests").glob("*.md"))
+    files.extend(path for path in (ROOT / "docs/superpowers").glob("*.md"))
+    files.extend(path for path in (ROOT / "docs/superpowers/specs").glob("README.md"))
+    files.extend(path for path in (ROOT / "docs/superpowers/plans").glob("README.md"))
+    return sorted(set(files))
+
+
+def test_maintained_relative_markdown_links_exist() -> None:
+    pattern = re.compile(r"\[[^]]+\]\(([^)]+)\)")
+    failures: list[str] = []
+    for document in maintained_markdown_files():
+        for raw_target in pattern.findall(document.read_text(encoding="utf-8")):
+            target = raw_target.strip("<>").split("#", 1)[0]
+            if not target or "://" in target or target.startswith("mailto:"):
+                continue
+            resolved = (document.parent / unquote(target)).resolve()
+            if not resolved.exists():
+                failures.append(f"{document.relative_to(ROOT)} -> {raw_target}")
+    assert failures == []
